@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Pinned so the build is reproducible; bump both values together.
+  PS5_PAYLOAD_SDK_VERSION: v0.43
+  PS5_PAYLOAD_SDK_SHA256: a9cc9929f21b2b2c5d5b309f3bab4997067c45281c0622cf4838b1aecba66fcb
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-18 lld-18 llvm-18
+
+      - name: Download PS5 Payload SDK
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/ps5-payload-sdk.zip" \
+            "https://github.com/ps5-payload-dev/sdk/releases/download/${PS5_PAYLOAD_SDK_VERSION}/ps5-payload-sdk.zip"
+          echo "${PS5_PAYLOAD_SDK_SHA256}  $RUNNER_TEMP/ps5-payload-sdk.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/ps5-payload-sdk.zip" -d "$RUNNER_TEMP"
+
+      - name: Build
+        run: make PS5_PAYLOAD_SDK="$RUNNER_TEMP/ps5-payload-sdk"
+
+      - name: Checksum
+        run: sha256sum ps5-date-time-sync.elf | tee ps5-date-time-sync.elf.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ps5-date-time-sync
+          path: |
+            ps5-date-time-sync.elf
+            ps5-date-time-sync.elf.sha256
+          if-no-files-found: error

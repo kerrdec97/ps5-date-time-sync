@@ -12,7 +12,7 @@ ELF := ps5-date-time-sync.elf
 CXXFLAGS := -Oz -Wall -Wextra -Werror -std=c++17 -fno-exceptions -fno-rtti
 LDLIBS := -lSceNet -lSceNotification
 
-.PHONY: all clean test manager-deploy
+.PHONY: all clean deploy test manager-deploy
 .DELETE_ON_ERROR:
 
 all: $(ELF)
@@ -23,8 +23,12 @@ $(ELF): main.cpp
 clean:
 	rm -f $(ELF)
 
-test: $(ELF)
+# Sends the payload to an ELF loader.  `test` is kept as an alias because it
+# is the PS5 Payload SDK's naming convention.
+deploy: $(ELF)
 	$(PS5_DEPLOY) -h $(PS5_HOST) -p $(PS5_PORT) $^
+
+test: deploy
 
 manager-deploy: $(ELF)
 	@echo "[PS5 Date/Time Sync] Uploading $(ELF) to $(MANAGER_URL)..."
